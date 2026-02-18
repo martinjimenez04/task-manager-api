@@ -1,80 +1,118 @@
 # Los endpoints
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
+from sqlalchemy.orm import Session
+from typing import List
+
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
-from typing import List, Optional
+from app.models.task import Task
+from app.database import get_db
 
 router = APIRouter(
-    prefix="/tasks",   # todos los endpoints de este archivo arrancan con /tasks
-    tags=["tasks"]     # agrupa los endpoints en la documentación /docs
+    prefix="/tasks",
+    tags=["tasks"]
 )
-
-# Base de datos temporal (en memoria — Fase 2 la reemplazamos con PostgreSQL)
-db: List[dict] = []
-counter = {"id": 1}  # simula el autoincrement de una DB
 
 
 @router.get("/", response_model=List[TaskResponse])
-def get_tasks(completada: Optional[bool] = None, prioridad: Optional[int] = None):
+def get_tasks(
+    completada: bool | None = None,
+    prioridad: int | None = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna todas las tareas con filtros opcionales.
+    """
+    # query = construye la consulta SQL, pero NO la ejecuta todavía
+    query = db.query(Task)
     
-    """ Retorna todas las tareas.
-    Filtros opcionales:
-    - **completada**: true o false
-    - **prioridad**: número (1, 2, 3...)"""
-    
-    resultado = db
-
+    # Si vienen filtros, los agrega a la query
     if completada is not None:
-        resultado = [t for t in resultado if t["completada"] == completada]
-
+        query = query.filter(Task.completada == completada)
+    
     if prioridad is not None:
-        resultado = [t for t in resultado if t["prioridad"] == prioridad]
-
-    return resultado
+        query = query.filter(Task.prioridad == prioridad)
+    
+    # .all() ejecuta la query y retorna la lista
+    return query.all()
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-def get_task(task_id: int):
-    """Retorna una tarea por ID"""
-    tarea = next((t for t in db if t["id"] == task_id), None)
+def get_task(task_id: int, db: Session = Depends(get_db)):
+    """
+    Retorna una tarea por ID.
+    """
+    # .first() ejecuta la query y retorna el primer resultado (o None)
+    tarea = db.query(Task).filter(Task.id == task_id).first()
+    
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
+    
     return tarea
 
 
 @router.post("/", response_model=TaskResponse, status_code=201)
-def create_task(task: TaskCreate):
-    """Crea una nueva tarea"""
-    nueva = {
-        "id": counter["id"],
-        "titulo": task.titulo,
-        "descripcion": task.descripcion,
-        "prioridad": task.prioridad,
-        "completada": False
-    }
-    db.append(nueva)
-    counter["id"] += 1
+def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+    """
+    Crea una nueva tarea.
+    """
+    # Convertir el schema Pydantic a modelo SQLAlchemy
+    # **task.model_dump() = desempaqueta el dict como argumentos
+    # Ejemplo: TaskCreate(titulo="X", prioridad=2) 
+    #       →  Task(titulo="X", prioridad=2, completada=False)
+    nueva = Task(**task.model_dump())
+    
+    # Agregar a la sesión (aún no se guarda en la DB)
+    db.add(nueva)
+    
+    # Commit = ejecuta el INSERT en PostgreSQL
+    db.commit()
+    
+    # Refresh = recarga el objeto desde la DB para obtener el ID generado
+    db.refresh(nueva)
+    
     return nueva
 
 
 @router.put("/{task_id}", response_model=TaskResponse)
-def update_task(task_id: int, task_update: TaskUpdate):
-    """Actualiza una tarea existente"""
-    tarea = next((t for t in db if t["id"] == task_id), None)
+def update_task(
+    task_id: int,
+    task_update: TaskUpdate,
+    db: Session = Depends(get_db)
+):
+    """
+    Actualiza una tarea existente.
+    """
+    tarea = db.query(Task).filter(Task.id == task_id).first()
+    
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
     
-    # Actualiza solo los campos que llegaron (exclude_unset ignora los None)
+    # exclude_unset=True ignora los campos que no vinieron en el request
     campos = task_update.model_dump(exclude_unset=True)
-    tarea.update(campos)
+    
+    # Actualizar solo los campos que llegaron
+    for key, value in campos.items():
+        setattr(tarea, key, value)  # tarea.titulo = "nuevo valor"
+    
+    db.commit()
+    db.refresh(tarea)
+    
     return tarea
 
 
 @router.delete("/{task_id}", status_code=204)
-def delete_task(task_id: int):
-    """Elimina una tarea"""
-    tarea = next((t for t in db if t["id"] == task_id), None)
+def delete_task(task_id: int, db: Session = Depends(get_db)):
+    """
+    Elimina una tarea.
+    """
+    tarea = db.query(Task).filter(Task.id == task_id).first()
+    
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
-    db.remove(tarea)
-
+    
+    db.delete(tarea)
+    db.commit()
+    
+    # 204 No Content = no devuelve nada en el body
+    return None
