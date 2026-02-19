@@ -1,12 +1,12 @@
-# Los endpoints
-
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import List
 
 from app.schemas.task import TaskCreate, TaskUpdate, TaskResponse
 from app.models.task import Task
+from app.models.user import User
 from app.database import get_db
+from app.dependencies import get_current_user
 
 router = APIRouter(
     prefix="/tasks",
@@ -18,32 +18,37 @@ router = APIRouter(
 def get_tasks(
     completada: bool | None = None,
     prioridad: int | None = None,
+    current_user: User = Depends(get_current_user), 
     db: Session = Depends(get_db)
 ):
     """
-    Retorna todas las tareas con filtros opcionales.
+    Retorna todas las tareas del usuario autenticado.
     """
-    # query = construye la consulta SQL, pero NO la ejecuta todavía
-    query = db.query(Task)
+    # Solo las tareas del usuario actual
+    query = db.query(Task).filter(Task.user_id == current_user.id)
     
-    # Si vienen filtros, los agrega a la query
     if completada is not None:
         query = query.filter(Task.completada == completada)
     
     if prioridad is not None:
         query = query.filter(Task.prioridad == prioridad)
     
-    # .all() ejecuta la query y retorna la lista
     return query.all()
 
 
 @router.get("/{task_id}", response_model=TaskResponse)
-def get_task(task_id: int, db: Session = Depends(get_db)):
+def get_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user),  
+    db: Session = Depends(get_db)
+):
     """
-    Retorna una tarea por ID.
+    Retorna una tarea por ID (solo si pertenece al usuario).
     """
-    # .first() ejecuta la query y retorna el primer resultado (o None)
-    tarea = db.query(Task).filter(Task.id == task_id).first()
+    tarea = db.query(Task).filter(
+        Task.id == task_id,
+        Task.user_id == current_user.id  # verificar que sea del usuario
+    ).first()
     
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
@@ -52,23 +57,21 @@ def get_task(task_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/", response_model=TaskResponse, status_code=201)
-def create_task(task: TaskCreate, db: Session = Depends(get_db)):
+def create_task(
+    task: TaskCreate,
+    current_user: User = Depends(get_current_user),  
+    db: Session = Depends(get_db)
+):
     """
-    Crea una nueva tarea.
+    Crea una nueva tarea asociada al usuario autenticado.
     """
-    # Convertir el schema Pydantic a modelo SQLAlchemy
-    # **task.model_dump() = desempaqueta el dict como argumentos
-    # Ejemplo: TaskCreate(titulo="X", prioridad=2) 
-    #       →  Task(titulo="X", prioridad=2, completada=False)
-    nueva = Task(**task.model_dump())
+    nueva = Task(
+        **task.model_dump(),
+        user_id=current_user.id  # asignar al usuario actual
+    )
     
-    # Agregar a la sesión (aún no se guarda en la DB)
     db.add(nueva)
-    
-    # Commit = ejecuta el INSERT en PostgreSQL
     db.commit()
-    
-    # Refresh = recarga el objeto desde la DB para obtener el ID generado
     db.refresh(nueva)
     
     return nueva
@@ -78,22 +81,23 @@ def create_task(task: TaskCreate, db: Session = Depends(get_db)):
 def update_task(
     task_id: int,
     task_update: TaskUpdate,
+    current_user: User = Depends(get_current_user),  
     db: Session = Depends(get_db)
 ):
     """
-    Actualiza una tarea existente.
+    Actualiza una tarea (solo si pertenece al usuario).
     """
-    tarea = db.query(Task).filter(Task.id == task_id).first()
+    tarea = db.query(Task).filter(
+        Task.id == task_id,
+        Task.user_id == current_user.id  # verificar que sea del usuario
+    ).first()
     
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
     
-    # exclude_unset=True ignora los campos que no vinieron en el request
     campos = task_update.model_dump(exclude_unset=True)
-    
-    # Actualizar solo los campos que llegaron
     for key, value in campos.items():
-        setattr(tarea, key, value)  # tarea.titulo = "nuevo valor"
+        setattr(tarea, key, value)
     
     db.commit()
     db.refresh(tarea)
@@ -102,11 +106,18 @@ def update_task(
 
 
 @router.delete("/{task_id}", status_code=204)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(
+    task_id: int,
+    current_user: User = Depends(get_current_user),  
+    db: Session = Depends(get_db)
+):
     """
-    Elimina una tarea.
+    Elimina una tarea (solo si pertenece al usuario).
     """
-    tarea = db.query(Task).filter(Task.id == task_id).first()
+    tarea = db.query(Task).filter(
+        Task.id == task_id,
+        Task.user_id == current_user.id  # verificar que sea del usuario
+    ).first()
     
     if not tarea:
         raise HTTPException(status_code=404, detail="Tarea no encontrada")
@@ -114,5 +125,4 @@ def delete_task(task_id: int, db: Session = Depends(get_db)):
     db.delete(tarea)
     db.commit()
     
-    # 204 No Content = no devuelve nada en el body
     return None

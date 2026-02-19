@@ -7,6 +7,8 @@ import os
 # Importar Base y los modelos
 from app.database import Base
 from app.models import task  # importante: importar para que Alembic detecte los modelos
+from app.models import user
+
 
 # Cargar variables de entorno
 load_dotenv()
