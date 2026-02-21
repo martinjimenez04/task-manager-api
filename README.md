@@ -1,72 +1,72 @@
 # Task Manager API v3
 
-REST API para gestión de tareas con autenticación JWT, construida con FastAPI, PostgreSQL y SQLAlchemy.
+REST API for task management with JWT authentication, built with FastAPI, PostgreSQL, and SQLAlchemy.
 
-## Stack
+## Tech Stack
 
-- **FastAPI** — framework web moderno y de alto rendimiento
-- **PostgreSQL** — base de datos relacional
-- **SQLAlchemy** — ORM para mapeo objeto-relacional
-- **Alembic** — manejo de migraciones de base de datos
-- **JWT** — autenticación con tokens
-- **Bcrypt** — hash seguro de contraseñas
-- **Pydantic** — validación automática de datos
-- **Uvicorn** — servidor ASGI
+- **FastAPI** — Modern, high-performance web framework
+- **PostgreSQL** — Relational database
+- **SQLAlchemy** — Object-Relational Mapping (ORM)
+- **Alembic** — Database migration management
+- **JWT** — Token-based authentication
+- **Bcrypt** — Secure password hashing
+- **Pydantic** — Automatic data validation
+- **Uvicorn** — ASGI server
 
-## Características
+## Features
 
-✅ Sistema completo de autenticación con JWT  
-✅ Registro y login de usuarios  
-✅ Hash de contraseñas con bcrypt  
-✅ Endpoints protegidos (requieren autenticación)  
-✅ Aislamiento de datos por usuario  
-✅ CRUD completo de tareas  
-✅ Filtros por query params  
-✅ Persistencia en PostgreSQL  
-✅ Migraciones con Alembic  
-✅ Validación de datos con Pydantic  
-✅ Documentación interactiva automática (Swagger)
+✅ Complete JWT authentication system  
+✅ User registration and login  
+✅ Bcrypt password hashing  
+✅ Protected endpoints (require authentication)  
+✅ User data isolation  
+✅ Full CRUD operations for tasks  
+✅ Query parameter filters  
+✅ PostgreSQL persistence  
+✅ Database migrations with Alembic  
+✅ Pydantic data validation  
+✅ Automatic interactive documentation (Swagger)
 
 ## Endpoints
 
-### Autenticación
+### Authentication
 
-| Método | Ruta | Descripción | Autenticación |
-|--------|------|-------------|---------------|
-| POST | `/auth/register` | Registrar nuevo usuario | No |
-| POST | `/auth/login` | Iniciar sesión (obtener token) | No |
+| Method | Route | Description | Authentication |
+|--------|-------|-------------|----------------|
+| POST | `/auth/register` | Register new user | No |
+| POST | `/auth/login` | Login (get token) | No |
 
-### Tareas (requieren autenticación)
+### Tasks (authentication required)
 
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/tasks` | Listar tareas del usuario |
-| GET | `/tasks/{id}` | Obtener una tarea por ID |
-| POST | `/tasks` | Crear nueva tarea |
-| PUT | `/tasks/{id}` | Actualizar tarea |
-| DELETE | `/tasks/{id}` | Eliminar tarea |
+| Method | Route | Description |
+|--------|-------|-------------|
+| GET | `/tasks` | List user's tasks |
+| GET | `/tasks/{id}` | Get task by ID |
+| POST | `/tasks` | Create new task |
+| PUT | `/tasks/{id}` | Update task |
+| DELETE | `/tasks/{id}` | Delete task |
 
-### Filtros disponibles en GET /tasks
+### Available filters for GET /tasks
 ```
 GET /tasks?completada=true
 GET /tasks?prioridad=2
 GET /tasks?completada=false&prioridad=1
 ```
 
-## Requisitos previos
+## Prerequisites
 
 - Python 3.10+
-- PostgreSQL 15+ instalado y corriendo
+- PostgreSQL 15+ installed and running
 
-## Instalación y configuración
+## Installation and Setup
 
-### 1. Clonar el repositorio
+### 1. Clone the repository
 ```bash
 git clone https://github.com/martinjimenez04/task-manager-api.git
 cd task-manager-api
 ```
 
-### 2. Crear y activar el entorno virtual
+### 2. Create and activate virtual environment
 ```bash
 python -m venv venv
 
@@ -77,69 +77,69 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. Instalar dependencias
+### 3. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configurar variables de entorno
+### 4. Configure environment variables
 
-Crear un archivo `.env` en la raíz del proyecto:
+Create a `.env` file in the project root:
 ```env
-DATABASE_URL=postgresql://postgres:tu_password@localhost:5432/task_manager_db
-SECRET_KEY=tu_clave_secreta_super_larga_y_aleatoria
+DATABASE_URL=postgresql://postgres:your_password@localhost:5432/task_manager_db
+SECRET_KEY=your_super_long_and_random_secret_key
 ```
 
-**Nota:** En producción, genera una SECRET_KEY fuerte con:
+**Note:** In production, generate a strong SECRET_KEY with:
 ```bash
 python -c "import secrets; print(secrets.token_hex(32))"
 ```
 
-### 5. Crear la base de datos
+### 5. Create the database
 
-En PostgreSQL (usando pgAdmin o psql):
+In PostgreSQL (using pgAdmin or psql):
 ```sql
 CREATE DATABASE task_manager_db;
 ```
 
-### 6. Ejecutar las migraciones
+### 6. Run migrations
 ```bash
 alembic upgrade head
 ```
 
-### 7. Correr el servidor
+### 7. Start the server
 ```bash
 uvicorn main:app --reload
 ```
 
-### 8. Abrir la documentación interactiva
+### 8. Open interactive documentation
 ```
 http://localhost:8000/docs
 ```
 
-## Uso de la API
+## API Usage
 
-### 1. Registrar un usuario
+### 1. Register a user
 ```bash
 POST /auth/register
 Content-Type: application/json
 
 {
-  "email": "usuario@example.com",
-  "password": "contraseña_segura"
+  "email": "user@example.com",
+  "password": "secure_password"
 }
 ```
 
-### 2. Iniciar sesión
+### 2. Login
 ```bash
 POST /auth/login
 Content-Type: application/x-www-form-urlencoded
 
-username=usuario@example.com
-password=contraseña_segura
+username=user@example.com
+password=secure_password
 ```
 
-Respuesta:
+Response:
 ```json
 {
   "access_token": "eyJhbGci...",
@@ -147,80 +147,80 @@ Respuesta:
 }
 ```
 
-### 3. Usar el token en requests protegidos
+### 3. Use token in protected requests
 
-Incluir el header en todas las peticiones a `/tasks`:
+Include the header in all requests to `/tasks`:
 ```
 Authorization: Bearer eyJhbGci...
 ```
 
-## Estructura del proyecto
+## Project Structure
 ```
 task-manager-api/
-├── alembic/              # Migraciones de base de datos
+├── alembic/              # Database migrations
 │   └── versions/
 ├── app/
 │   ├── core/
-│   │   ├── config.py     # Configuración (SECRET_KEY, etc)
-│   │   └── security.py   # Funciones de JWT y bcrypt
+│   │   ├── config.py     # Configuration (SECRET_KEY, etc)
+│   │   └── security.py   # JWT and bcrypt functions
 │   ├── models/
-│   │   ├── user.py       # Modelo User
-│   │   └── task.py       # Modelo Task
+│   │   ├── user.py       # User model
+│   │   └── task.py       # Task model
 │   ├── routers/
-│   │   ├── auth.py       # Endpoints de autenticación
-│   │   └── tasks.py      # Endpoints de tareas
+│   │   ├── auth.py       # Authentication endpoints
+│   │   └── tasks.py      # Task endpoints
 │   ├── schemas/
-│   │   ├── user.py       # Schemas Pydantic de User
-│   │   ├── task.py       # Schemas Pydantic de Task
-│   │   └── token.py      # Schemas de JWT
-│   ├── database.py       # Configuración de SQLAlchemy
+│   │   ├── user.py       # User Pydantic schemas
+│   │   ├── task.py       # Task Pydantic schemas
+│   │   └── token.py      # JWT schemas
+│   ├── database.py       # SQLAlchemy configuration
 │   └── dependencies.py   # get_current_user
-├── .env                  # Variables de entorno
+├── .env                  # Environment variables
 ├── .gitignore
-├── alembic.ini           # Configuración de Alembic
+├── alembic.ini           # Alembic configuration
 ├── main.py              
 └── requirements.txt     
 ```
 
-## Seguridad
+## Security
 
-- ✅ Contraseñas hasheadas con bcrypt
-- ✅ Tokens JWT firmados con SECRET_KEY
-- ✅ Tokens con expiración (7 días por defecto)
-- ✅ Validación de tokens en cada request protegido
-- ✅ Aislamiento de datos: cada usuario solo ve sus propias tareas
-- ✅ Variables sensibles en `.env` 
+- ✅ Passwords hashed with bcrypt (never stored in plain text)
+- ✅ JWT tokens signed with SECRET_KEY
+- ✅ Token expiration (7 days by default)
+- ✅ Token validation on every protected request
+- ✅ Data isolation: each user can only see their own tasks
+- ✅ Sensitive variables in `.env` file
 
-## Migraciones
+## Migrations
 
-**Crear una nueva migración:**
+**Create a new migration:**
 ```bash
-alembic revision --autogenerate -m "descripcion del cambio"
+alembic revision --autogenerate -m "description of change"
 ```
 
-**Aplicar migraciones:**
+**Apply migrations:**
 ```bash
 alembic upgrade head
 ```
 
-**Revertir última migración:**
+**Revert last migration:**
 ```bash
 alembic downgrade -1
 ```
 
-## Próximas mejoras (v4)
+## Upcoming Features (v4)
 
 - [ ] Refresh tokens
-- [ ] Roles y permisos (admin/user)
-- [ ] Tests con pytest
-- [ ] Dockerización
-- [ ] CI/CD con GitHub Actions
+- [ ] Roles and permissions (admin/user)
+- [ ] Tests with pytest
+- [ ] Dockerization
+- [ ] CI/CD with GitHub Actions
 - [ ] Rate limiting
-- [ ] Paginación en listados
+- [ ] Pagination for listings
 
-## Autor
+## Author
 
 **Martin Jimenez**  
-Estudiante de Ingeniería en Sistemas de Información - UTN FRC
+Information Systems Engineering Student - UTN FRC
 
 GitHub: [@martinjimenez04](https://github.com/martinjimenez04)
